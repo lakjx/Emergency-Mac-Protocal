@@ -155,6 +155,7 @@ class MacProtocolEnv():
         self.trajact_BS_msg = [self.BS_msg for _ in range(self.recent_k+1)]
         self.trajact_UE_msg = [self.UE_msg for _ in range(self.recent_k+1)]
 
+        
         self.sdus_received = []
         self.data_channel = []
         self.rewards = 0

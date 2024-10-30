@@ -10,7 +10,7 @@ from offpolicy.utils.util import DecayThenFlatSchedule
 class RecRunner(object):
     """Base class for training recurrent policies."""
 
-    def __init__(self, config):
+    def __init__(self, config,test_mode=False):
         """
         Base class for training recurrent policies.
         :param config: (dict) Config dictionary containing parameters for training.
@@ -136,8 +136,11 @@ class RecRunner(object):
 
         self.policies = {p_id: Policy(config, self.policy_info[p_id]) for p_id in self.policy_ids}
 
-        if self.model_dir is not None:
-            self.restorer()
+        if test_mode:
+            if self.model_dir is not None: 
+                self.restorer()
+            else:
+                raise ValueError("No model directory specified for testing. Please specify a model directory.")
 
         # initialize trainer class for updating policies
         self.trainer = TrainAlgo(self.args, self.num_agents, self.policies, self.policy_mapping_fn,

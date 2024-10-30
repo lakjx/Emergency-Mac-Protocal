@@ -188,12 +188,12 @@ def main(args):
               }
 
     total_num_steps = 0
-    # runner = Runner(config=config)
-    # while total_num_steps < all_args.num_env_steps:
-    #     total_num_steps = runner.run()
+    runner = Runner(config=config)
+    while total_num_steps < all_args.num_env_steps:
+        total_num_steps = runner.run()
 
-    runner = Runner(config=config,test_mode=True)
-    runner.eval()
+    # runner = Runner(config=config,test_mode=True)
+    # runner.eval()
 
     # env.close()
     if all_args.use_eval and (eval_env is not env):

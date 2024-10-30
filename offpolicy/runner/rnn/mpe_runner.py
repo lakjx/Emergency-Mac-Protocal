@@ -7,7 +7,7 @@ from offpolicy.runner.rnn.base_runner import RecRunner
 class MPERunner(RecRunner):
     """Runner class for Multiagent Particle Envs (MPE). See parent class for more information."""
     def __init__(self, config, test_mode=False):
-        super(MPERunner, self).__init__(config)
+        super(MPERunner, self).__init__(config, test_mode)
         self.collecter = self.shared_collect_rollout if self.share_policy else self.separated_collect_rollout
         # fill replay buffer with random actions
         # fill replay buffer with random actions

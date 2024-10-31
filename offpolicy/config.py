@@ -189,7 +189,6 @@ def get_config():
                         help="After how many episodes of training the policy model should be saved")
 
     # pretained parameters
-    parser.add_argument("--model_dir", type=str, default=
-                        r"D:\Project\workplace\off-policy-release\offpolicy\scripts\results\Mac\Mac Protocol\rmaddpg\debug0\wandb\run-20241029_224117-tx6ggfii\files")
+    parser.add_argument("--model_dir", type=str, default=None)
 
     return parser

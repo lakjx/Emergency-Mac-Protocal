@@ -171,16 +171,14 @@ class MacProtocolEnv():
         return obs_n
 
     def step(self, action_n,UCM=None,DCM=None):
-        
+        UE_actions = [act[0] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
+        UCM = [act[1] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
+        DCM = self.BS_msg_total_space[action_n[-1][0]]
+        # UE_actions = action_n
         #测试状态下，打印每个UE的buffer状态
         if not self.is_training:
-            UE_actions = action_n
             for UE in self.UEs:
-                print(UE.name,UE.buff)
-        else:
-            UE_actions = [act[0] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
-            UCM = [act[1] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
-            DCM = self.BS_msg_total_space[action_n[-1][0]]
+                print(UE.name,UE.buff)         
 
         if isinstance(UE_actions, list):
             UE_actions = np.array(UE_actions)

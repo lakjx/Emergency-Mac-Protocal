@@ -171,36 +171,41 @@ class MacProtocolEnv():
         return obs_n
 
     def step(self, action_n,UCM=None,DCM=None):
-        UE_actions = [act[0] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
-        UCM = [act[1] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
-        DCM = self.BS_msg_total_space[action_n[-1][0]]
-        # UE_actions = action_n
-        #随机生成UE的SDU
-        self.UE_SDU_Generate()
-        #打印每个UE的buffer状态
+        
+        #测试状态下，打印每个UE的buffer状态
         if not self.is_training:
+            UE_actions = action_n
             for UE in self.UEs:
                 print(UE.name,UE.buff)
+        else:
+            UE_actions = [act[0] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
+            UCM = [act[1] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
+            DCM = self.BS_msg_total_space[action_n[-1][0]]
+
         if isinstance(UE_actions, list):
             UE_actions = np.array(UE_actions)
         elif isinstance(UE_actions, torch.Tensor):
             UE_actions = UE_actions.cpu().numpy()
         
+        #随机生成UE的SDU
+        new_data_list = self.UE_SDU_Generate()
+        print('new_data_list:',new_data_list) if not self.is_training else None
+
         self.UE_actions = UE_actions
         self.UE_Signaling_policy(np.array(UCM)) if UCM is not None else self.UE_Signaling_policy()
         self.BS_Signaling_policy(np.array(DCM)) if DCM is not None else self.BS_Signaling_policy()
         error_del = False
         self.data_channel = []
         for UE in self.UEs:
-            if UE_actions[UE.name_id] == self.UE_act_space.Transmit and len(UE.buff) > 0:
-                data = UE.transmit_SDU()
-                self.data_channel.append(data)
-            
-            elif UE_actions[UE.name_id] == self.UE_act_space.Delete and len(UE.buff) > 0:
-                del_data = UE.delete_SDU()
-                if del_data not in self.sdus_received:
-                    error_del = True
-
+            if len(UE.buff) > 0:
+                if UE_actions[UE.name_id] == self.UE_act_space.Transmit and UE.buff[0] != new_data_list[UE.name_id]:
+                    data = UE.transmit_SDU()
+                    self.data_channel.append(data)
+                
+                elif UE_actions[UE.name_id] == self.UE_act_space.Delete and UE.buff[0] != new_data_list[UE.name_id]:
+                    del_data = UE.delete_SDU()
+                    if del_data not in self.sdus_received:
+                        error_del = True
             else:
                 pass
         self.check_channel(error_del)                 
@@ -307,9 +312,14 @@ class MacProtocolEnv():
         assert self.BS_obs_space.contains(self.BS_obs)
                                    
     def UE_SDU_Generate(self):
+        gen_data_list = []
         for UE in self.UEs:
             if not UE.is_already_generated() and np.random.rand() < self.p_SDU_arrival:
-                cur_buff = UE.generate_SDU()
+                cur_gen_data = UE.generate_SDU()
+            else:
+                cur_gen_data = None
+            gen_data_list.append(cur_gen_data)
+        return gen_data_list
 
     def BS_Signaling_policy(self,DCM=None):
         # BS can send one control message to each UE
@@ -350,14 +360,16 @@ class UE():
         self.buff = []
     
     def generate_SDU(self):
+        gen_data = None
         if len(self.buff) < self.buff_size:
-            for gen_data in self.buff_to_be_transmit:
-                if gen_data not in self.buff:
-                    self.buff.append(gen_data)
+            for data in self.buff_to_be_transmit:
+                if data not in self.buff:
+                    self.buff.append(data)
+                    gen_data = data
                     break
         else:
             print(self.name + ' buffer is full!')
-        return self.buff
+        return gen_data
     
     def delete_SDU(self):
         if len(self.buff) > 0:
@@ -398,7 +410,7 @@ if __name__ == '__main__':
     parser.add_argument('--DCM', type=int, default=None)
     args = parser.parse_args()
     env = MacProtocolEnv(args)
-
+    env.is_training = False
     print("init obs:",env.reset())
     t=0
     while env.done == False:

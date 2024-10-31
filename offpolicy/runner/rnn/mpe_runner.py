@@ -47,7 +47,7 @@ class MPERunner(RecRunner):
         policy = self.policies[p_id]
 
         env = self.env if training_episode or warmup else self.eval_env
-        env.envs[0].is_training = training_episode
+        env.envs[0].is_training = training_episode or warmup
         obs = env.reset() #shape (1,agent_num,obs_dim)
 
         rnn_states_batch = np.zeros((self.num_envs * self.num_agents, self.hidden_size), dtype=np.float32)
@@ -142,7 +142,7 @@ class MPERunner(RecRunner):
         """
         env_info = {}
         env = self.env if training_episode or warmup else self.eval_env
-        env.envs[0].is_training = training_episode
+        env.envs[0].is_training = training_episode or warmup
 
         obs = env.reset()
 

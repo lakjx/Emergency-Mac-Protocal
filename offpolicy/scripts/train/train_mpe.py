@@ -68,7 +68,7 @@ def parse_args(args, parser):
     parser.add_argument('--UE_txbuff_len', type=int, default=5)
     parser.add_argument('--UE_max_generate_SDUs', type=int, default=2)
     parser.add_argument('--p_SDU_arrival', type=float, default=0.5)
-    parser.add_argument('--tbl_error_rate', type=float, default=1e-3)
+    parser.add_argument('--tbl_error_rate', type=float, default=1e-2)
     parser.add_argument('--TTLs', type=int, default=24)
     parser.add_argument('--UCM', type=int, default=None)
     parser.add_argument('--DCM', type=int, default=None)

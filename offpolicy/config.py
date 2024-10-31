@@ -8,7 +8,7 @@ def get_config():
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str, default="rmaddpg", choices=[
                         "rmatd3", "rmaddpg", "rmasac", "qmix", "vdn", "matd3", "maddpg", "masac", "mqmix", "mvdn"])
-    parser.add_argument("--experiment_name", type=str, default="debug0")
+    parser.add_argument("--experiment_name", type=str, default="exp1")
     parser.add_argument("--seed", type=int, default=1,
                         help="Random seed for numpy/torch")
     parser.add_argument("--cuda", action='store_false', default=True)

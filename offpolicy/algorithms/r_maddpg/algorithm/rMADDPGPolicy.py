@@ -36,6 +36,10 @@ class R_MADDPGPolicy(RecurrentPolicy):
         self.hidden_size = self.args.hidden_size
         self.discrete = is_discrete(self.act_space)
         self.multidiscrete = is_multidiscrete(self.act_space)
+        if not self.act_space:
+            self.non_act = True
+        else:
+            self.non_act = False
 
         actor_class = R_MATD3_Actor if td3 else R_MADDPG_Actor
         critic_class = R_MATD3_Critic if td3 else R_MADDPG_Critic
@@ -75,61 +79,64 @@ class R_MADDPGPolicy(RecurrentPolicy):
             no_sequence = False
 
         eps = None
-        if use_target:
-            actor_out, new_rnn_states = self.target_actor(obs, prev_actions, rnn_states)
-        else:
-            actor_out, new_rnn_states = self.actor(obs, prev_actions, rnn_states)
-
-        if self.discrete:
-            if self.multidiscrete:
-                if use_gumbel or (use_target and self.target_noise is not None):
-                    onehot_actions = list(map(lambda a: gumbel_softmax(a, hard=True, device=self.device), actor_out))
-                    actions = torch.cat(onehot_actions, dim=-1)
-                elif explore:
-                    onehot_actions = list(map(lambda a: gumbel_softmax(a, hard=True, device=self.device), actor_out))
-                    onehot_actions = torch.cat(onehot_actions, dim=-1)
-                    assert no_sequence, "Doesn't make sense to do exploration on a sequence!"
-                    # eps greedy exploration
-                    eps = self.exploration.eval(t_env)
-                    rand_numbers = np.random.rand(batch_size, 1)
-                    take_random = (rand_numbers < eps).astype(int).reshape(-1, 1)
-                    # random actions sample uniformly from action space
-                    random_actions = [OneHotCategorical(logits=torch.ones(batch_size, self.act_dim[i])).sample() for i in range(len(self.act_dim))]
-                    random_actions = torch.cat(random_actions, dim=1)
-                    actions = (1 - take_random) * to_numpy(onehot_actions) + take_random * to_numpy(random_actions)
-                else:
-                    onehot_actions = list(map(onehot_from_logits, actor_out))
-                    actions = torch.cat(onehot_actions, dim=-1)
-  
+        if self.non_act is False:
+            if use_target:
+                actor_out, new_rnn_states = self.target_actor(obs, prev_actions, rnn_states)
             else:
-                if use_gumbel or (use_target and self.target_noise is not None):
-                    actions = gumbel_softmax(actor_out, available_actions, hard=True, device=self.device)  # gumbel has a gradient 
-                elif explore:
-                    onehot_actions = gumbel_softmax(actor_out, available_actions, hard=True, device=self.device)  # gumbel has a gradient                    
+                actor_out, new_rnn_states = self.actor(obs, prev_actions, rnn_states)
+
+            if self.discrete:
+                if self.multidiscrete:
+                    if use_gumbel or (use_target and self.target_noise is not None):
+                        onehot_actions = list(map(lambda a: gumbel_softmax(a, hard=True, device=self.device), actor_out))
+                        actions = torch.cat(onehot_actions, dim=-1)
+                    elif explore:
+                        onehot_actions = list(map(lambda a: gumbel_softmax(a, hard=True, device=self.device), actor_out))
+                        onehot_actions = torch.cat(onehot_actions, dim=-1)
+                        assert no_sequence, "Doesn't make sense to do exploration on a sequence!"
+                        # eps greedy exploration
+                        eps = self.exploration.eval(t_env)
+                        rand_numbers = np.random.rand(batch_size, 1)
+                        take_random = (rand_numbers < eps).astype(int).reshape(-1, 1)
+                        # random actions sample uniformly from action space
+                        random_actions = [OneHotCategorical(logits=torch.ones(batch_size, self.act_dim[i])).sample() for i in range(len(self.act_dim))]
+                        random_actions = torch.cat(random_actions, dim=1)
+                        actions = (1 - take_random) * to_numpy(onehot_actions) + take_random * to_numpy(random_actions)
+                    else:
+                        onehot_actions = list(map(onehot_from_logits, actor_out))
+                        actions = torch.cat(onehot_actions, dim=-1)
+    
+                else:
+                    if use_gumbel or (use_target and self.target_noise is not None):
+                        actions = gumbel_softmax(actor_out, available_actions, hard=True, device=self.device)  # gumbel has a gradient 
+                    elif explore:
+                        onehot_actions = gumbel_softmax(actor_out, available_actions, hard=True, device=self.device)  # gumbel has a gradient                    
+                        assert no_sequence, "Cannot do exploration on a sequence!"
+                        # eps greedy exploration
+                        eps = self.exploration.eval(t_env)
+                        rand_numbers = np.random.rand(batch_size, 1)
+                        # random actions sample uniformly from action space
+                        logits = avail_choose(torch.ones(batch_size, self.act_dim), available_actions)
+                        random_actions = OneHotCategorical(logits=logits).sample().numpy()
+                        take_random = (rand_numbers < eps).astype(int)
+                        actions = (1 - take_random) * to_numpy(onehot_actions) + take_random * random_actions
+                    else:
+                        actions = onehot_from_logits(actor_out, available_actions)  # no gradient
+
+            else:
+                if explore:
                     assert no_sequence, "Cannot do exploration on a sequence!"
-                    # eps greedy exploration
-                    eps = self.exploration.eval(t_env)
-                    rand_numbers = np.random.rand(batch_size, 1)
-                    # random actions sample uniformly from action space
-                    logits = avail_choose(torch.ones(batch_size, self.act_dim), available_actions)
-                    random_actions = OneHotCategorical(logits=logits).sample().numpy()
-                    take_random = (rand_numbers < eps).astype(int)
-                    actions = (1 - take_random) * to_numpy(onehot_actions) + take_random * random_actions
+                    actions = gaussian_noise(actor_out.shape, self.args.act_noise_std) + actor_out
+                elif use_target and self.target_noise is not None:
+                    assert isinstance(self.target_noise, float)
+                    actions = gaussian_noise(actor_out.shape, self.target_noise) + actor_out
                 else:
-                    actions = onehot_from_logits(actor_out, available_actions)  # no gradient
-
+                    actions = actor_out
+                # # clip the actions at the bounds of the action space
+                # actions = torch.max(torch.min(actions, torch.from_numpy(self.act_space.high)), torch.from_numpy(self.act_space.low))
         else:
-            if explore:
-                assert no_sequence, "Cannot do exploration on a sequence!"
-                actions = gaussian_noise(actor_out.shape, self.args.act_noise_std) + actor_out
-            elif use_target and self.target_noise is not None:
-                assert isinstance(self.target_noise, float)
-                actions = gaussian_noise(actor_out.shape, self.target_noise) + actor_out
-            else:
-                actions = actor_out
-            # # clip the actions at the bounds of the action space
-            # actions = torch.max(torch.min(actions, torch.from_numpy(self.act_space.high)), torch.from_numpy(self.act_space.low))
-
+            actions = np.array([[]]*batch_size)
+            new_rnn_states = rnn_states[:]
         return actions, new_rnn_states, eps
 
     def init_hidden(self, num_agents, batch_size):
@@ -154,6 +161,8 @@ class R_MADDPGPolicy(RecurrentPolicy):
                     random_actions = OneHotCategorical(logits=logits).sample().numpy()
                 else:
                     random_actions = OneHotCategorical(logits=torch.ones(batch_size, self.act_dim)).sample().numpy()
+        elif self.non_act:
+            random_actions = np.array([[]]*batch_size)
         else:
             random_actions = np.random.uniform(self.act_space.low, self.act_space.high, size=(batch_size, self.act_dim))
 

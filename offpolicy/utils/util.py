@@ -237,7 +237,10 @@ def get_dim_from_space(space):
     elif "MultiDiscrete" in space.__class__.__name__:
         return (space.high - space.low) + 1
     elif isinstance(space, list):
-        dim = space[0]
+        if not space:
+            dim = 0
+        else:
+            dim = space[0]
     else:
         raise Exception("Unrecognized space: ", type(space))
     return dim

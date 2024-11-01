@@ -28,7 +28,7 @@ class R_MADDPG(Trainer):
             self.episode_length = episode_length
 
         self.num_agents = num_agents
-        self.policies = policies
+        self.policies = {key: policy for key, policy in policies.items() if policy.act_space != []}
         self.policy_mapping_fn = policy_mapping_fn
         self.policy_ids = sorted(list(self.policies.keys()))
         self.policy_agents = {policy_id: sorted(

@@ -8,7 +8,7 @@ def get_config():
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str, default="rmaddpg", choices=[
                         "rmatd3", "rmaddpg", "rmasac", "qmix", "vdn", "matd3", "maddpg", "masac", "mqmix", "mvdn"])
-    parser.add_argument("--experiment_name", type=str, default="exp3")
+    parser.add_argument("--experiment_name", type=str, default="exp_nocom_k3")
     parser.add_argument("--seed", type=int, default=1,
                         help="Random seed for numpy/torch")
     parser.add_argument("--cuda", action='store_false', default=True)
@@ -62,7 +62,7 @@ def get_config():
                         default=False, help="Whether agents share the same policy")
     parser.add_argument('--hidden_size', type=int, default=64,
                         help="Dimension of hidden layers for actor/critic networks")
-    parser.add_argument('--layer_N', type=int, default=1,
+    parser.add_argument('--layer_N', type=int, default=2,
                         help="Number of layers for actor/critic networks")
     parser.add_argument('--use_ReLU', action='store_false',
                         default=True, help="Whether to use ReLU")
@@ -109,7 +109,7 @@ def get_config():
     parser.add_argument("--weight_decay", type=float, default=0)
 
     # algo common parameters
-    parser.add_argument('--batch_size', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=32,
                         help="Number of buffer transitions to train on at once")
     parser.add_argument('--gamma', type=float, default=0.99,
                         help="Discount factor for env")

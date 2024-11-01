@@ -108,8 +108,8 @@ class MacProtocolEnv():
             u_action_space = spaces.Discrete(len(self.UE_act_space))
             if agent != 'BS':
                 total_action_space.append(u_action_space)
-            elif agent == 'BS' and self.args.need_comm == False:
-                total_action_space.append(spaces.Discrete(2))
+            # elif agent == 'BS' and self.args.need_comm == False:
+            #     total_action_space.append(spaces.Discrete(2))
             #communication action
             if self.args.need_comm:
                 if agent != 'BS':
@@ -126,8 +126,10 @@ class MacProtocolEnv():
                 else:
                     raise NotImplementedError
                 self.action_space.append(action_space)
-            else:
+            elif len(total_action_space) == 1:
                 self.action_space.append(total_action_space[0])
+            else:
+                self.action_space.append([])
             # observation space
             if agent != 'BS':
                 obs_dim = 4*(self.recent_k+1) if self.args.need_comm else 2*(self.recent_k+1)

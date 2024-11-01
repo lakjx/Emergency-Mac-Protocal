@@ -202,13 +202,17 @@ class MPERunner(RecRunner):
                 env_act = []
                 for p_id in self.policy_ids:
                     p_dim = self.policy_act_dim[p_id][0] if isinstance(self.policy_act_dim[p_id],np.ndarray) else self.policy_act_dim[p_id]
-                    d_act1 = last_acts[p_id][i, 0][:p_dim].argmax()
-                    if last_acts[p_id][i, 0][p_dim:].size > 0:
-                        d_act2 = last_acts[p_id][i, 0][p_dim:].argmax() # communication action
-                        env_act.append(np.array([d_act1, d_act2]))
+                    if p_dim == 0:
+                        env_act.append(np.array([]))
+                        continue
                     else:
-                        env_act.append(np.array([d_act1]))
-                    # env_act.append(last_acts[p_id][i, 0])
+                        d_act1 = last_acts[p_id][i, 0][:p_dim].argmax()
+                        if last_acts[p_id][i, 0][p_dim:].size > 0:
+                            d_act2 = last_acts[p_id][i, 0][p_dim:].argmax() # communication action
+                            env_act.append(np.array([d_act1, d_act2]))
+                        else:
+                            env_act.append(np.array([d_act1]))
+                        # env_act.append(last_acts[p_id][i, 0])
                 env_acts.append(env_act)
 
             # env step and store the relevant episode information

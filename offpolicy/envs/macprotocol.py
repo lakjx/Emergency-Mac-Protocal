@@ -108,13 +108,16 @@ class MacProtocolEnv():
             u_action_space = spaces.Discrete(len(self.UE_act_space))
             if agent != 'BS':
                 total_action_space.append(u_action_space)
+            elif agent == 'BS' and self.args.need_comm == False:
+                total_action_space.append(spaces.Discrete(2))
             #communication action
-            if agent != 'BS':
-                c_action_space = spaces.Discrete(len(self.UE_msg_space))
-                total_action_space.append(c_action_space)
-            else:
-                c_action_space = spaces.Discrete(len(self.BS_msg_space)**self.UE_num)
-                total_action_space.append(c_action_space)
+            if self.args.need_comm:
+                if agent != 'BS':
+                    c_action_space = spaces.Discrete(len(self.UE_msg_space))
+                    total_action_space.append(c_action_space)
+                else:
+                    c_action_space = spaces.Discrete(len(self.BS_msg_space)**self.UE_num)
+                    total_action_space.append(c_action_space)
             
             if len(total_action_space) > 1:
                 # all action spaces are discrete, so simplify to MultiDiscrete action space
@@ -127,10 +130,10 @@ class MacProtocolEnv():
                 self.action_space.append(total_action_space[0])
             # observation space
             if agent != 'BS':
-                obs_dim = 4*(self.recent_k+1)
+                obs_dim = 4*(self.recent_k+1) if self.args.need_comm else 2*(self.recent_k+1)
                 self.observation_space.append(spaces.Discrete(obs_dim))
             else:
-                obs_dim = self.recent_k+1 + self.UE_num*2*(self.recent_k+1)
+                obs_dim = self.recent_k+1 + self.UE_num*2*(self.recent_k+1) if self.args.need_comm else self.recent_k+1
                 self.observation_space.append(spaces.Discrete(obs_dim))
             share_obs_dim += obs_dim
         self.share_observation_space = [spaces.Discrete(share_obs_dim)] * self.num_agents
@@ -172,8 +175,8 @@ class MacProtocolEnv():
 
     def step(self, action_n,UCM=None,DCM=None):
         UE_actions = [act[0] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
-        UCM = [act[1] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS']
-        DCM = self.BS_msg_total_space[action_n[-1][0]]
+        UCM = [act[1] for (i, act) in enumerate(action_n) if self.agents[i] != 'BS'] if self.args.need_comm else None
+        DCM = self.BS_msg_total_space[action_n[-1][0]] if self.args.need_comm else None
         # UE_actions = action_n
         #测试状态下，打印每个UE的buffer状态
         if not self.is_training:
@@ -255,13 +258,19 @@ class MacProtocolEnv():
             a = [0 for _ in range(gap)] + [self.trajact_UE_actions[0][tar_ue_idx]]
             n = [0 for _ in range(gap)] + [self.trajact_UE_msg[0][tar_ue_idx]]
             m = [0 for _ in range(gap)] + [self.trajact_BS_msg[0][tar_ue_idx]]
-            return np.concatenate((o,a,n,m),axis=0).flatten()
+            if self.args.need_comm:
+                return np.concatenate((o,a,n,m),axis=0).flatten()
+            else:
+                return np.concatenate((o,a),axis=0).flatten()
         else:
             o = [self.trajact_UE_obs[i][tar_ue_idx] for i in range(self.recent_k+1)]
             a = [self.trajact_UE_actions[i][tar_ue_idx] for i in range(self.recent_k+1)]
             n = [self.trajact_UE_msg[i][tar_ue_idx] for i in range(self.recent_k+1)]
             m = [self.trajact_BS_msg[i][tar_ue_idx] for i in range(self.recent_k+1)]
-            return np.concatenate((o,a,n,m),axis=0).flatten()
+            if self.args.need_comm:
+                return np.concatenate((o,a,n,m),axis=0).flatten()
+            else:
+                return np.concatenate((o,a),axis=0).flatten()
             
             
 
@@ -276,9 +285,15 @@ class MacProtocolEnv():
             self.trajact_BS_obs = [np.zeros((1,),dtype=np.int32) for _ in range(gap)] + self.trajact_BS_obs
             self.trajact_BS_msg = [np.zeros((self.UE_num,),dtype=np.int32) for _ in range(gap)] + self.trajact_BS_msg
             self.trajact_UE_msg = [np.zeros((self.UE_num,),dtype=np.int32) for _ in range(gap)] + self.trajact_UE_msg
-            return np.concatenate((self.trajact_BS_obs,self.trajact_UE_msg,self.trajact_BS_msg),axis=1).flatten()
+            if self.args.need_comm:
+                return np.concatenate((self.trajact_BS_obs,self.trajact_UE_msg,self.trajact_BS_msg),axis=1).flatten()
+            else:
+                return np.array(self.trajact_BS_obs).flatten()
         else:
-            return np.concatenate((self.trajact_BS_obs,self.trajact_UE_msg,self.trajact_BS_msg),axis=1).flatten()
+            if self.args.need_comm:
+                return np.concatenate((self.trajact_BS_obs,self.trajact_UE_msg,self.trajact_BS_msg),axis=1).flatten()
+            else:
+                return np.array(self.trajact_BS_obs).flatten()
     
     def get_rwd(self):
         return self.rewards
@@ -356,7 +371,10 @@ class UE():
 
         self.buff_to_be_transmit = [self.name + '_' + str(i) for i in range(self.UE_max_generate_SDUs)]
         self.buff = []
-    
+
+        self.SG = False
+        self.ACK = False
+
     def generate_SDU(self):
         gen_data = None
         if len(self.buff) < self.buff_size:
@@ -406,6 +424,7 @@ if __name__ == '__main__':
     parser.add_argument('--TTLs', type=int, default=24)
     parser.add_argument('--UCM', type=int, default=None)
     parser.add_argument('--DCM', type=int, default=None)
+    parser.add_argument('--need_comm', type=bool, default=False)
     args = parser.parse_args()
     env = MacProtocolEnv(args)
     env.is_training = False

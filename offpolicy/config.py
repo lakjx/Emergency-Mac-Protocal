@@ -8,7 +8,7 @@ def get_config():
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str, default="rmaddpg", choices=[
                         "rmatd3", "rmaddpg", "rmasac", "qmix", "vdn", "matd3", "maddpg", "masac", "mqmix", "mvdn"])
-    parser.add_argument("--experiment_name", type=str, default="exp1")
+    parser.add_argument("--experiment_name", type=str, default="exp3")
     parser.add_argument("--seed", type=int, default=1,
                         help="Random seed for numpy/torch")
     parser.add_argument("--cuda", action='store_false', default=True)
@@ -21,7 +21,7 @@ def get_config():
     parser.add_argument('--n_eval_rollout_threads', type=int,  default=1,
                         help="Number of parallel envs for evaluating rollout")
     parser.add_argument('--num_env_steps', type=int,
-                        default=1000000, help="Number of env steps to train for")
+                        default=500000, help="Number of env steps to train for")
     parser.add_argument('--use_wandb', action='store_false', default=True,
                         help="Whether to use weights&biases, if not, use tensorboardX instead")
     parser.add_argument('--user_name', type=str, default="renxuan-promax-zhejiang-university")
@@ -102,14 +102,14 @@ def get_config():
     parser.add_argument("--use_cat_self", action='store_false', default=True)
 
     # optimizer parameters
-    parser.add_argument('--lr', type=float, default=5e-4,
+    parser.add_argument('--lr', type=float, default=1e-3,
                         help="Learning rate for Adam")
     parser.add_argument("--opti_eps", type=float, default=1e-5,
                         help='RMSprop optimizer epsilon (default: 1e-5)')
     parser.add_argument("--weight_decay", type=float, default=0)
 
     # algo common parameters
-    parser.add_argument('--batch_size', type=int, default=64,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help="Number of buffer transitions to train on at once")
     parser.add_argument('--gamma', type=float, default=0.99,
                         help="Discount factor for env")
@@ -191,5 +191,5 @@ def get_config():
     # pretained parameters
     parser.add_argument("--model_dir", type=str, default=
                         r"D:\Project\workplace\off-policy-release\offpolicy\scripts\results\Mac\Mac Protocol\rmaddpg\debug0\wandb\run-20241029_224117-tx6ggfii\files")
-
+    parser.add_argument("--need_comm", action='store_true', default=False)
     return parser

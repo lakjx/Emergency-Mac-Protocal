@@ -109,7 +109,7 @@ def get_config():
     parser.add_argument("--weight_decay", type=float, default=0)
 
     # algo common parameters
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=1024,
                         help="Number of buffer transitions to train on at once")
     parser.add_argument('--gamma', type=float, default=0.99,
                         help="Discount factor for env")

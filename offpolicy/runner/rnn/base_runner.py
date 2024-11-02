@@ -234,8 +234,8 @@ class RecRunner(object):
         self.train_infos = []
         update_actor = False
         for p_id in self.policy_ids:
-            if self.policies[p_id].act_space == []:
-                continue
+            # if self.policies[p_id].act_space == []:
+                # continue
             if self.use_per:
                 beta = self.beta_anneal.eval(self.total_train_steps)
                 sample = self.buffer.sample(self.batch_size, beta, p_id)

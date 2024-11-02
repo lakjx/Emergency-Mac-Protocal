@@ -63,7 +63,7 @@ def parse_args(args, parser):
                         default=True, help="Whether to use available actions")
 
     parser.add_argument('--rho', type=int, default=3)
-    parser.add_argument('--recent_k', type=int, default=3)
+    parser.add_argument('--recent_k', type=int, default=2)
     parser.add_argument('--UE_num', type=int, default=2)
     parser.add_argument('--UE_txbuff_len', type=int, default=5)
     parser.add_argument('--UE_max_generate_SDUs', type=int, default=2)

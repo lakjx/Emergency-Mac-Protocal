@@ -309,9 +309,9 @@ class MacProtocolEnv():
             if np.random.rand() > self.tbl_error_rate: #正确接收
                 if data not in self.sdus_received:
                     self.sdus_received.append(data)
-                    for UE in self.UEs:
-                        if data in UE.buff_to_be_transmit:
-                            UE.buff_to_be_transmit.remove(data) 
+                    # for UE in self.UEs:
+                    #     if data in UE.buff_to_be_transmit:
+                    #         UE.buff_to_be_transmit.remove(data) 
                     self.rewards = self.rho
                 else:
                     self.rewards = -1
@@ -379,14 +379,13 @@ class UE():
 
     def generate_SDU(self):
         gen_data = None
-        if len(self.buff) < self.buff_size:
+        if len(self.buff) < self.buff_size and len(self.buff_to_be_transmit) > 0:
             for data in self.buff_to_be_transmit:
                 if data not in self.buff:
                     self.buff.append(data)
+                    self.buff_to_be_transmit.remove(data)
                     gen_data = data
                     break
-        else:
-            print(self.name + ' buffer is full!')
         return gen_data
     
     def delete_SDU(self):

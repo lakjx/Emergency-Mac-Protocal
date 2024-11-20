@@ -65,9 +65,8 @@ def parse_args(args, parser):
     parser.add_argument('--rho', type=int, default=3)
     parser.add_argument('--recent_k', type=int, default=2)
     parser.add_argument('--UE_num', type=int, default=2)
-    parser.add_argument('--UE_txbuff_len', type=int, default=5)
-    parser.add_argument('--UE_max_generate_SDUs', type=int, default=2)
-    parser.add_argument('--p_SDU_arrival', type=float, default=0.5)
+    parser.add_argument('--UE_txbuff_len', type=int, default=20)
+    parser.add_argument('--p_SDU_arrival', type=float, default=0.48)
     parser.add_argument('--tbl_error_rate', type=float, default=1e-2)
     parser.add_argument('--TTLs', type=int, default=24)
     parser.add_argument('--UCM', type=int, default=None)
@@ -105,7 +104,7 @@ def main(args):
     if all_args.use_wandb:
         # init wandb
         run = wandb.init(config=all_args,
-                         project=all_args.env_name,
+                         project=all_args.wandb_name,
                          entity=all_args.user_name,
                          notes=socket.gethostname(),
                          name=str(all_args.algorithm_name) + "_" +
@@ -188,12 +187,12 @@ def main(args):
               }
 
     total_num_steps = 0
-    # runner = Runner(config=config)
-    # while total_num_steps < all_args.num_env_steps:
-    #     total_num_steps = runner.run()
+    runner = Runner(config=config)
+    while total_num_steps < all_args.num_env_steps:
+        total_num_steps = runner.run()
 
-    runner = Runner(config=config,test_mode=True)
-    runner.eval()
+    # runner = Runner(config=config,test_mode=True)
+    # runner.eval()
 
     # env.close()
     if all_args.use_eval and (eval_env is not env):

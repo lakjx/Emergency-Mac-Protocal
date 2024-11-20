@@ -19,10 +19,14 @@ class MPERunner(RecRunner):
     def eval(self):
         """Collect episodes to evaluate the policy."""
         self.trainer.prep_rollout()
-        eval_infos = {}
-        eval_infos['average_episode_rewards'] = []
-        eval_infos['Goodput'] = []
-        eval_infos['Packet_Received_Ratio'] = []
+        eval_infos = {
+        'average_episode_rewards': [],
+        'Goodput': [],
+        'Packet_Received_Ratio': [],
+        'Collision_Ratio': [],
+        'buffer_occupancy': []
+        }
+        
         for _ in range(self.args.num_eval_episodes):
             env_info = self.collecter( explore=False, training_episode=False, warmup=False)
             for k, v in env_info.items():
@@ -259,7 +263,9 @@ class MPERunner(RecRunner):
 
         env_info['average_episode_rewards'] = np.mean(average_episode_rewards)
         env_info['Goodput'] = env.envs[0].get_Goodput()
-        env_info['Packet_Received_Ratio'] = env.envs[0].get_Packet_Received_Ratio()
+        env_info['Packet_Received_Ratio'] = env.envs[0].get_packet_arrival_rate()
+        env_info['Collision_Ratio'] = env.envs[0].get_collision_rate()
+        env_info['buffer_occupancy'] = np.average(env.envs[0].get_buffer_occupancy())
 
         return env_info
 
@@ -286,3 +292,5 @@ class MPERunner(RecRunner):
         self.env_infos['average_episode_rewards'] = []
         self.env_infos['Goodput'] = []
         self.env_infos['Packet_Received_Ratio'] = []
+        self.env_infos['Collision_Ratio'] = []
+        self.env_infos['buffer_occupancy'] = []

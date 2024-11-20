@@ -71,6 +71,8 @@ class MacProtocolEnv():
         self.tbl_error_rate = self.args.tbl_error_rate
         self.TTLs = self.args.TTLs  # Max. duration of episode
         self.recent_k = self.args.recent_k
+        self.collision_count = 0
+        self.gen_data_count = 0
         self.UE_act_space = DotDic({
             'Do Nothing': 0,
             'Transmit': 1,
@@ -144,6 +146,8 @@ class MacProtocolEnv():
 
     def reset(self):
         self.step_count = 0
+        self.collision_count = 0
+        self.gen_data_count = 0
 
         self.UEs = [UE(i,self.args) for i in range(self.UE_num)]
 
@@ -154,11 +158,12 @@ class MacProtocolEnv():
         self.BS_msg = np.zeros((self.UE_num,), dtype=np.int32)
         self.UE_msg = np.zeros((self.UE_num,), dtype=np.int32)
 
-        self.trajact_UE_obs = [self.UE_obs for _ in range(self.recent_k+1)]
-        self.trajact_UE_actions = [self.UE_actions for _ in range(self.recent_k+1)]
-        self.trajact_BS_obs = [self.BS_obs for _ in range(self.recent_k+1)]
-        self.trajact_BS_msg = [self.BS_msg for _ in range(self.recent_k+1)]
-        self.trajact_UE_msg = [self.UE_msg for _ in range(self.recent_k+1)]
+        self.trajact_UE_obs = [copy.deepcopy(self.UE_obs) for _ in range(self.recent_k + 1)]
+        self.trajact_UE_actions = [copy.deepcopy(self.UE_actions) for _ in range(self.recent_k + 1)]
+        self.trajact_BS_obs = [copy.deepcopy(self.BS_obs) for _ in range(self.recent_k + 1)]
+        self.trajact_BS_msg = [copy.deepcopy(self.BS_msg) for _ in range(self.recent_k + 1)]
+        self.trajact_UE_msg = [copy.deepcopy(self.UE_msg) for _ in range(self.recent_k + 1)]
+
 
         
         self.sdus_received = []
@@ -212,12 +217,12 @@ class MacProtocolEnv():
             else:
                 pass
         self.check_channel(error_del)                 
-
-        self.trajact_UE_obs.append(np.array([UE.get_obs() for UE in self.UEs]))
-        self.trajact_UE_actions.append(self.UE_actions)
-        self.trajact_BS_obs.append(self.BS_obs) if isinstance(self.BS_obs,np.ndarray) else self.trajact_BS_obs.append(np.array([self.BS_obs]))
-        self.trajact_BS_msg.append(self.BS_msg)
-        self.trajact_UE_msg.append(self.UE_msg)
+    
+        self.trajact_UE_obs.append(copy.deepcopy(np.array([UE.get_obs() for UE in self.UEs])))
+        self.trajact_UE_actions.append(copy.deepcopy(self.UE_actions))
+        self.trajact_BS_obs.append(copy.deepcopy(self.BS_obs) if isinstance(self.BS_obs, np.ndarray) else np.array([self.BS_obs]))
+        self.trajact_BS_msg.append(copy.deepcopy(self.BS_msg))
+        self.trajact_UE_msg.append(copy.deepcopy(self.UE_msg))
         if len(self.trajact_UE_obs) > self.recent_k+1:
             self.trajact_UE_obs.pop(0)
             self.trajact_UE_actions.pop(0)
@@ -225,7 +230,7 @@ class MacProtocolEnv():
             self.trajact_BS_msg.pop(0)
             self.trajact_UE_msg.pop(0)
 
-        self.done = self.step_count >= self.TTLs or all([UE.is_done() for UE in self.UEs])
+        self.done = self.step_count >= self.TTLs
         self.step_count += 1
         if not self.is_training:
             print('step:',self.step_count,'UE_act:',UE_actions,'datachannel:',self.data_channel,'rewards:',self.rewards)
@@ -253,26 +258,23 @@ class MacProtocolEnv():
         # n = self.UE_msg[UE.name_id]
         # m = self.BS_msg[UE.name_id]
         # return np.array([o,a,n,m])
-        if len(self.trajact_UE_obs) < self.recent_k+1:
-            #填0补齐补足recent_k+1的部分
-            gap = self.recent_k+1 - len(self.trajact_UE_obs)
-            o = [0 for _ in range(gap)] + [self.trajact_UE_obs[0][tar_ue_idx]]
-            a = [0 for _ in range(gap)] + [self.trajact_UE_actions[0][tar_ue_idx]]
-            n = [0 for _ in range(gap)] + [self.trajact_UE_msg[0][tar_ue_idx]]
-            m = [0 for _ in range(gap)] + [self.trajact_BS_msg[0][tar_ue_idx]]
-            if self.args.need_comm:
-                return np.concatenate((o,a,n,m),axis=0).flatten()
-            else:
-                return np.concatenate((o,a),axis=0).flatten()
+        if len(self.trajact_UE_obs) < self.recent_k + 1:
+            # 填充缺失的轨迹数据，使用最近的观测值
+            gap = self.recent_k + 1 - len(self.trajact_UE_obs)
+            o = [self.trajact_UE_obs[0][tar_ue_idx]] * gap + [self.trajact_UE_obs[i][tar_ue_idx] for i in range(len(self.trajact_UE_obs))]
+            a = [self.trajact_UE_actions[0][tar_ue_idx]] * gap + [self.trajact_UE_actions[i][tar_ue_idx] for i in range(len(self.trajact_UE_actions))]
+            n = [self.trajact_UE_msg[0][tar_ue_idx]] * gap + [self.trajact_UE_msg[i][tar_ue_idx] for i in range(len(self.trajact_UE_msg))]
+            m = [self.trajact_BS_msg[0][tar_ue_idx]] * gap + [self.trajact_BS_msg[i][tar_ue_idx] for i in range(len(self.trajact_BS_msg))]
         else:
-            o = [self.trajact_UE_obs[i][tar_ue_idx] for i in range(self.recent_k+1)]
-            a = [self.trajact_UE_actions[i][tar_ue_idx] for i in range(self.recent_k+1)]
-            n = [self.trajact_UE_msg[i][tar_ue_idx] for i in range(self.recent_k+1)]
-            m = [self.trajact_BS_msg[i][tar_ue_idx] for i in range(self.recent_k+1)]
-            if self.args.need_comm:
-                return np.concatenate((o,a,n,m),axis=0).flatten()
-            else:
-                return np.concatenate((o,a),axis=0).flatten()
+            o = [self.trajact_UE_obs[i][tar_ue_idx] for i in range(self.recent_k + 1)]
+            a = [self.trajact_UE_actions[i][tar_ue_idx] for i in range(self.recent_k + 1)]
+            n = [self.trajact_UE_msg[i][tar_ue_idx] for i in range(self.recent_k + 1)]
+            m = [self.trajact_BS_msg[i][tar_ue_idx] for i in range(self.recent_k + 1)]
+
+        if self.args.need_comm:
+            return np.concatenate((o, a, n, m), axis=0).flatten()
+        else:
+            return np.concatenate((o, a), axis=0).flatten()
             
             
 
@@ -281,21 +283,17 @@ class MacProtocolEnv():
         #检查BS_obs的数据类型
         assert self.BS_obs_space.contains(self.BS_obs[0] if isinstance(self.BS_obs,np.ndarray) else self.BS_obs)
         
-        if len(self.trajact_BS_obs) < self.recent_k+1:
-            #填0补齐补足recent_k+1的部分
-            gap = self.recent_k+1 - len(self.trajact_BS_obs)
-            self.trajact_BS_obs = [np.zeros((1,),dtype=np.int32) for _ in range(gap)] + self.trajact_BS_obs
-            self.trajact_BS_msg = [np.zeros((self.UE_num,),dtype=np.int32) for _ in range(gap)] + self.trajact_BS_msg
-            self.trajact_UE_msg = [np.zeros((self.UE_num,),dtype=np.int32) for _ in range(gap)] + self.trajact_UE_msg
-            if self.args.need_comm:
-                return np.concatenate((self.trajact_BS_obs,self.trajact_UE_msg,self.trajact_BS_msg),axis=1).flatten()
-            else:
-                return np.array(self.trajact_BS_obs).flatten()
+        if len(self.trajact_BS_obs) < self.recent_k + 1:
+            # 填充缺失的轨迹数据，使用最近的观测值
+            gap = self.recent_k + 1 - len(self.trajact_BS_obs)
+            self.trajact_BS_obs = [self.trajact_BS_obs[0]] * gap + self.trajact_BS_obs
+            self.trajact_BS_msg = [self.trajact_BS_msg[0]] * gap + self.trajact_BS_msg
+            self.trajact_UE_msg = [self.trajact_UE_msg[0]] * gap + self.trajact_UE_msg
+
+        if self.args.need_comm:
+            return np.concatenate((self.trajact_BS_obs, self.trajact_UE_msg, self.trajact_BS_msg), axis=1).flatten()
         else:
-            if self.args.need_comm:
-                return np.concatenate((self.trajact_BS_obs,self.trajact_UE_msg,self.trajact_BS_msg),axis=1).flatten()
-            else:
-                return np.array(self.trajact_BS_obs).flatten()
+            return np.array(self.trajact_BS_obs).flatten()
     
     def get_rwd(self):
         return self.rewards
@@ -309,28 +307,27 @@ class MacProtocolEnv():
             if np.random.rand() > self.tbl_error_rate: #正确接收
                 if data not in self.sdus_received:
                     self.sdus_received.append(data)
-                    # for UE in self.UEs:
-                    #     if data in UE.buff_to_be_transmit:
-                    #         UE.buff_to_be_transmit.remove(data) 
-                    self.rewards = self.rho
+                    self.rewards = 2*self.rho
                 else:
                     self.rewards = -1
         elif self.data_channel == []: # 空闲
             self.BS_obs = 0
             self.rewards = -1
         else:
+            self.collision_count += 1
             self.BS_obs = self.UE_num + 1
             self.rewards = -1
         if error_del:
-            self.rewards = -self.rho  
+            self.rewards = self.rewards-self.rho  
         #判断BS_obs是否合法
         assert self.BS_obs_space.contains(self.BS_obs)
                                    
     def UE_SDU_Generate(self):
         gen_data_list = []
         for UE in self.UEs:
-            if not UE.is_already_generated() and np.random.rand() < self.p_SDU_arrival:
+            if np.random.rand() < self.p_SDU_arrival:
                 cur_gen_data = UE.generate_SDU()
+                self.gen_data_count += 1
             else:
                 cur_gen_data = None
             gen_data_list.append(cur_gen_data)
@@ -355,9 +352,12 @@ class MacProtocolEnv():
         if self.step_count == 0:
             raise ValueError('step_count is 0!')
         return len(self.sdus_received)/self.step_count
-    def get_Packet_Received_Ratio(self):
-        return len(self.sdus_received)/(self.UE_num*self.args.UE_max_generate_SDUs)
-    
+    def get_collision_rate(self):
+        return self.collision_count / self.step_count
+    def get_buffer_occupancy(self):
+        return [UE.get_obs()/UE.buff_size for UE in self.UEs]
+    def get_packet_arrival_rate(self):
+        return len(self.sdus_received)/self.gen_data_count
     def seed(self, seed=None):
         if seed is None:
             np.random.seed(1)
@@ -369,23 +369,17 @@ class UE():
         self.name_id = name_id
         self.name = 'UE' + str(name_id)
         self.buff_size = args.UE_txbuff_len
-        self.UE_max_generate_SDUs = args.UE_max_generate_SDUs #Until a maximum of P SDUs have been generated for each UE
-
-        self.buff_to_be_transmit = [self.name + '_' + str(i) for i in range(self.UE_max_generate_SDUs)]
         self.buff = []
-
+        self.datacount = 0
         self.SG = False
         self.ACK = False
 
     def generate_SDU(self):
         gen_data = None
-        if len(self.buff) < self.buff_size and len(self.buff_to_be_transmit) > 0:
-            for data in self.buff_to_be_transmit:
-                if data not in self.buff:
-                    self.buff.append(data)
-                    self.buff_to_be_transmit.remove(data)
-                    gen_data = data
-                    break
+        if len(self.buff) < self.buff_size:
+            gen_data = self.name + '_' + str(self.datacount)
+            self.buff.append(gen_data)
+            self.datacount += 1
         return gen_data
     
     def delete_SDU(self):
@@ -406,11 +400,6 @@ class UE():
     def get_obs(self):
         return len(self.buff)
     
-    def is_done(self):
-        return len(self.buff) == 0 and len(self.buff_to_be_transmit) == 0
-    
-    def is_already_generated(self):
-        return len(self.buff_to_be_transmit) == 0
     
 
 if __name__ == '__main__':
@@ -418,9 +407,9 @@ if __name__ == '__main__':
     parser.add_argument('--rho', type=int, default=3)
     parser.add_argument('--recent_k', type=int, default=0)
     parser.add_argument('--UE_num', type=int, default=2)
-    parser.add_argument('--UE_txbuff_len', type=int, default=5)
-    parser.add_argument('--UE_max_generate_SDUs', type=int, default=2)
-    parser.add_argument('--p_SDU_arrival', type=float, default=0.5)
+    parser.add_argument('--UE_txbuff_len', type=int, default=20)
+    # parser.add_argument('--UE_max_generate_SDUs', type=int, default=2)
+    parser.add_argument('--p_SDU_arrival', type=float, default=0.48)
     parser.add_argument('--tbl_error_rate', type=float, default=1e-3)
     parser.add_argument('--TTLs', type=int, default=24)
     parser.add_argument('--UCM', type=int, default=None)
@@ -436,5 +425,8 @@ if __name__ == '__main__':
         o,r,_,_ =env.step(UE_actions)
         print("observation:{}".format(o))
         print("reward:{}".format(r))
-
+    print('Goodput:',env.get_Goodput())
+    print('collision rate:',env.get_collision_rate())
+    print('buffer occupancy:',np.average(env.get_buffer_occupancy()))
+    print('packet arrival rate:',env.get_packet_arrival_rate())
         

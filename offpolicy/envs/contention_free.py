@@ -137,10 +137,10 @@ def run_simulation(num_ues, buffer_size, arrival_prob, num_steps):
 # 运行模拟
 if __name__ == "__main__":
     # 设置参数
-    L = 10       # UE数量
+    L = 2       # UE数量
     B = 20      # 缓冲区大小
     T = 24     # 模拟步数
-    pa = 12/T    # SDU到达概率
+    pa = 2/T    # SDU到达概率
 
     
     run_simulation(L, B, pa, T)

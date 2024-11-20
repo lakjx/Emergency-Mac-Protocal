@@ -110,7 +110,7 @@ def get_config():
     parser.add_argument("--weight_decay", type=float, default=0)
 
     # algo common parameters
-    parser.add_argument('--batch_size', type=int, default=2,
+    parser.add_argument('--batch_size', type=int, default=1024,
                         help="Number of buffer transitions to train on at once")
     parser.add_argument('--gamma', type=float, default=0.99,
                         help="Discount factor for env")
@@ -156,9 +156,9 @@ def get_config():
                         help="Number of episodes to add to buffer with purely random actions")
     parser.add_argument('--epsilon_start', type=float, default=1.0,
                         help="Starting value for epsilon, for eps-greedy exploration")
-    parser.add_argument('--epsilon_finish', type=float, default=0.05,
+    parser.add_argument('--epsilon_finish', type=float, default=0.1,
                         help="Ending value for epsilon, for eps-greedy exploration")
-    parser.add_argument('--epsilon_anneal_time', type=int, default=50000,
+    parser.add_argument('--epsilon_anneal_time', type=int, default=100000,
                         help="Number of episodes until epsilon reaches epsilon_finish")
     parser.add_argument('--act_noise_std', type=float,
                         default=0.1, help="Action noise")

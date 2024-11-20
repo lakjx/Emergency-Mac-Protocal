@@ -120,7 +120,7 @@ class BaseStation:
 def run_simulation(num_ues, buffer_size, arrival_prob, num_steps):
     bs = BaseStation(num_ues, buffer_size, arrival_prob)
     
-    repititions = 100000
+    repititions = 100
     avg_goodput = 0
     for _ in range(repititions):
         for step in range(num_steps):
@@ -137,7 +137,7 @@ def run_simulation(num_ues, buffer_size, arrival_prob, num_steps):
 # 运行模拟
 if __name__ == "__main__":
     # 设置参数
-    L = 2       # UE数量
+    L = 10       # UE数量
     B = 20      # 缓冲区大小
     T = 24     # 模拟步数
     pa = 12/T    # SDU到达概率

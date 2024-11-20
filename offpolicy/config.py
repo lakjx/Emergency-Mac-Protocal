@@ -190,6 +190,6 @@ def get_config():
 
     # pretained parameters
     parser.add_argument("--model_dir", type=str, default=
-                        r"D:\Project\workplace\off-policy-release\offpolicy\scripts\results\Mac\Mac Protocol\rmaddpg\debug0\wandb\run-20241029_224117-tx6ggfii\files")
-    parser.add_argument("--need_comm", action='store_true', default=True)
+                        r"D:\Project\workplace\off-policy-release\offpolicy\scripts\results\Mac\Mac Protocol\rmaddpg\exp_nocom_k2\wandb\run-20241101_213413-g3h2cboo\files")
+    parser.add_argument("--need_comm", action='store_true', default=False)
     return parser

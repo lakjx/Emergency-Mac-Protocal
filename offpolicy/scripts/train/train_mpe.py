@@ -192,7 +192,8 @@ def main(args):
     #     total_num_steps = runner.run()
 
     runner = Runner(config=config,test_mode=True)
-    runner.eval()
+    # runner.eval()
+    runner.test()
 
     # env.close()
     if all_args.use_eval and (eval_env is not env):

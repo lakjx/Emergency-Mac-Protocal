@@ -156,7 +156,6 @@ class MPERunner(RecRunner):
             episode_records = {
                 'state': [],
                 'action': [],
-                'reward': [],
             }
 
         env_info = {}
@@ -181,8 +180,7 @@ class MPERunner(RecRunner):
             if test:
                 current_state = {
                     'step': t,
-                    'observation': obs,
-                    'shared_observation': share_obs
+                    'observation': [oo.tolist() if isinstance(oo, np.ndarray) else oo for oo in obs[0]],
                 }
                 episode_records['state'].append(current_state)
 
@@ -244,7 +242,7 @@ class MPERunner(RecRunner):
             if test:
                 current_action = {
                     'step': t,
-                    'action': env_acts
+                    'action': [aa.tolist() if isinstance(aa, np.ndarray) else aa for aa in env_acts[0]],
                 }
                 episode_records['action'].append(current_action)
             
@@ -280,7 +278,7 @@ class MPERunner(RecRunner):
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             #标记用户数量的到达率p_SDU_arrival
-            logo = str(self.args.UE_num) + "_" + str(self.args.SDU_arrival_rate)
+            logo = 'UE:'+str(self.args.UE_num) + "_p=" + str(self.args.p_SDU_arrival)
             file_name = os.path.join(save_dir, logo + ".json")
             with open(file_name, 'w') as f:
                 json.dump(episode_records, f,indent=4)

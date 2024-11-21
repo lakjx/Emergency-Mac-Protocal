@@ -140,7 +140,7 @@ if __name__ == "__main__":
     L = 2       # UE数量
     B = 20      # 缓冲区大小
     T = 24     # 模拟步数
-    pa = 2/T    # SDU到达概率
+    pa = 11/T    # SDU到达概率
 
     
     run_simulation(L, B, pa, T)

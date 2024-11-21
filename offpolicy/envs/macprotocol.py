@@ -202,7 +202,7 @@ class MacProtocolEnv():
         self.UE_actions = UE_actions
         self.UE_Signaling_policy(np.array(UCM)) if UCM is not None else self.UE_Signaling_policy()
         self.BS_Signaling_policy(np.array(DCM)) if DCM is not None else self.BS_Signaling_policy()
-        error_del = False
+        error_del = 0
         self.data_channel = []
         for UE in self.UEs:
             if len(UE.buff) > 0:
@@ -213,7 +213,9 @@ class MacProtocolEnv():
                 elif UE_actions[UE.name_id] == self.UE_act_space.Delete and UE.buff[0] != new_data_list[UE.name_id]:
                     del_data = UE.delete_SDU()
                     if del_data not in self.sdus_received:
-                        error_del = True
+                        error_del = error_del + 1
+                    else:
+                        error_del = error_del - 1
             else:
                 pass
         self.check_channel(error_del)                 
@@ -309,16 +311,16 @@ class MacProtocolEnv():
                     self.sdus_received.append(data)
                     self.rewards = 2*self.rho
                 else:
-                    self.rewards = -1
+                    self.rewards = -self.rho 
         elif self.data_channel == []: # 空闲
             self.BS_obs = 0
-            self.rewards = -1
+            self.rewards = -self.rho/2
         else:
             self.collision_count += 1
             self.BS_obs = self.UE_num + 1
-            self.rewards = -1
-        if error_del:
-            self.rewards = self.rewards-self.rho  
+            self.rewards = -self.rho/2
+
+        self.rewards = self.rewards - error_del*self.rho
         #判断BS_obs是否合法
         assert self.BS_obs_space.contains(self.BS_obs)
                                    

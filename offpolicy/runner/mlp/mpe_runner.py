@@ -32,8 +32,21 @@ class MPERunner(MlpRunner):
 
         self.log_env(eval_infos, suffix="eval_")
 
+    @torch.no_grad()
+    def test(self):
+        """Collect episodes to test the policy."""
+        self.trainer.prep_rollout()
+        test_infos = {}
+        test_infos['average_episode_rewards'] = []
+
+        for _ in range(1):
+            env_info = self.collecter( explore=False, training_episode=False, warmup=False, test=True)
+            for k, v in env_info.items():
+                test_infos[k].append(v)
+
+
     # for mpe-simple_spread and mpe-simple_reference
-    def shared_collect_rollout(self, explore=True, training_episode=True, warmup=False):
+    def shared_collect_rollout(self, explore=True, training_episode=True, warmup=False,test=False):
         """
         Collect a rollout and store it in the buffer. All agents share a single policy. Do training steps when appropriate
         :param explore: (bool) whether to use an exploration strategy when collecting the episoide.
@@ -153,7 +166,7 @@ class MPERunner(MlpRunner):
         return env_info
 
     # for mpe-simple_speaker_listener 
-    def separated_collect_rollout(self, explore=True, training_episode=True, warmup=False):
+    def separated_collect_rollout(self, explore=True, training_episode=True, warmup=False,test=False):
         """
         Collect a rollout and store it in the buffer. Each agent has its own policy.. Do training steps when appropriate.
         :param explore: (bool) whether to use an exploration strategy when collecting the episoide.
@@ -165,6 +178,13 @@ class MPERunner(MlpRunner):
         env_info = {}
         env = self.env if explore else self.eval_env
         n_rollout_threads = self.num_envs if explore else self.num_eval_envs
+
+        if test:
+            episode_records = {
+                'state': [],
+                'action': [],
+                'reward': [],
+            }
 
         if not explore:
             obs = env.reset()
@@ -216,6 +236,14 @@ class MPERunner(MlpRunner):
             acts.append(temp_act)
 
         for step in range(self.episode_length):
+            if test:
+                current_state = {
+                    'step': step,
+                    'observation': obs,
+                    'shared_observation': share_obs
+                }
+                episode_records['state'].append(current_state)
+
             for agent_id, p_id in zip(self.agent_ids, self.policy_ids):
                 policy = self.policies[p_id]
                 # get actions for all agents to step the env
@@ -240,6 +268,12 @@ class MPERunner(MlpRunner):
                     env_act.append(acts[agent_id][i])
                 env_acts.append(env_act)
 
+            if test:
+                current_action = {
+                    'step': step,
+                    'action': env_acts
+                }
+                episode_records['action'].append(current_action)
             # env step and store the relevant episode information
             next_obs, rewards, dones, infos = env.step(env_acts)
 

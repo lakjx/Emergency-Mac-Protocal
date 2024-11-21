@@ -33,7 +33,15 @@ class MPERunner(RecRunner):
                 eval_infos[k].append(v)
 
         self.log_env(eval_infos, suffix="eval_")
-      
+    
+    @torch.no_grad()
+    def test(self):
+        """Collect episodes to test the policy."""
+        self.trainer.prep_rollout()
+
+        for _ in range(1):
+            env_info = self.collecter( explore=False, training_episode=False, warmup=False, test=True)
+
     # for mpe-simple_spread and mpe-simple_reference  
     @torch.no_grad() 
     def shared_collect_rollout(self, explore=True, training_episode=True, warmup=False):
@@ -135,7 +143,7 @@ class MPERunner(RecRunner):
 
     # for mpe-simple_speaker_listener
     @torch.no_grad()
-    def separated_collect_rollout(self, explore=True, training_episode=True, warmup=False):
+    def separated_collect_rollout(self, explore=True, training_episode=True, warmup=False, test=False):
         """
         Collect a rollout and store it in the buffer. Each agent has its own policy.
         :param explore: (bool) whether to use an exploration strategy when collecting the episoide.
@@ -144,6 +152,13 @@ class MPERunner(RecRunner):
 
         :return env_info: (dict) contains information about the rollout (total rewards, etc).
         """
+        if test:
+            episode_records = {
+                'state': [],
+                'action': [],
+                'reward': [],
+            }
+
         env_info = {}
         env = self.env if training_episode or warmup else self.eval_env
         env.envs[0].is_training = training_episode or warmup
@@ -163,6 +178,14 @@ class MPERunner(RecRunner):
 
         t = 0
         while t < self.episode_length:
+            if test:
+                current_state = {
+                    'step': t,
+                    'observation': obs,
+                    'shared_observation': share_obs
+                }
+                episode_records['state'].append(current_state)
+
             for agent_id, p_id in zip(self.agent_ids, self.policy_ids):
                 policy = self.policies[p_id]
                 agent_obs = np.array([each_env_obs[agent_id] for each_env_obs in obs])  # agent_obs = np.stack(obs[:, agent_id])
@@ -218,7 +241,13 @@ class MPERunner(RecRunner):
                             env_act.append(np.array([d_act1]))
                         # env_act.append(last_acts[p_id][i, 0])
                 env_acts.append(env_act)
-
+            if test:
+                current_action = {
+                    'step': t,
+                    'action': env_acts
+                }
+                episode_records['action'].append(current_action)
+            
             # env step and store the relevant episode information
             next_obs, rewards, dones, infos = env.step(env_acts)
 
@@ -244,6 +273,17 @@ class MPERunner(RecRunner):
 
             if terminate_episodes:
                 break
+        if test:
+            import json
+            import os
+            save_dir = self.args.test_record_dir
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            #标记用户数量的到达率p_SDU_arrival
+            logo = str(self.args.UE_num) + "_" + str(self.args.SDU_arrival_rate)
+            file_name = os.path.join(save_dir, logo + ".json")
+            with open(file_name, 'w') as f:
+                json.dump(episode_records, f,indent=4)
 
         for agent_id, p_id in zip(self.agent_ids, self.policy_ids):
             # episode_obs[p_id][t] = np.stack(obs[:, agent_id])

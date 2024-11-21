@@ -8,7 +8,7 @@ def get_config():
     # prepare parameters
     parser.add_argument("--algorithm_name", type=str, default="rmaddpg", choices=[
                         "rmatd3", "rmaddpg", "rmasac", "qmix", "vdn", "matd3", "maddpg", "masac", "mqmix", "mvdn"])
-    parser.add_argument("--experiment_name", type=str, default="a_p048_exploration")
+    parser.add_argument("--experiment_name", type=str, default="a_p048_exploration_continue")
     parser.add_argument("--seed", type=int, default=1,
                         help="Random seed for numpy/torch")
     parser.add_argument("--cuda", action='store_false', default=True)
@@ -21,7 +21,7 @@ def get_config():
     parser.add_argument('--n_eval_rollout_threads', type=int,  default=1,
                         help="Number of parallel envs for evaluating rollout")
     parser.add_argument('--num_env_steps', type=int,
-                        default=400000, help="Number of env steps to train for")
+                        default=800000, help="Number of env steps to train for")
     parser.add_argument('--use_wandb', action='store_false', default=True,
                         help="Whether to use weights&biases, if not, use tensorboardX instead")
     parser.add_argument('--user_name', type=str, default="renxuan-promax-zhejiang-university")
@@ -156,12 +156,12 @@ def get_config():
                         help="Number of episodes to add to buffer with purely random actions")
     parser.add_argument('--epsilon_start', type=float, default=1.0,
                         help="Starting value for epsilon, for eps-greedy exploration")
-    parser.add_argument('--epsilon_finish', type=float, default=0.1,
+    parser.add_argument('--epsilon_finish', type=float, default=0.15,
                         help="Ending value for epsilon, for eps-greedy exploration")
     parser.add_argument('--epsilon_anneal_time', type=int, default=100000,
                         help="Number of episodes until epsilon reaches epsilon_finish")
     parser.add_argument('--act_noise_std', type=float,
-                        default=0.1, help="Action noise")
+                        default=0.2, help="Action noise")
 
     # train parameters
     parser.add_argument('--actor_train_interval_step', type=int, default=1,
@@ -191,6 +191,6 @@ def get_config():
 
     # pretained parameters
     parser.add_argument("--model_dir", type=str, default=
-                        r"D:\Project\workplace\off-policy-release\offpolicy\scripts\results\Mac\Mac Protocol\rmaddpg\exp_nocom_k2\wandb\run-20241101_213413-g3h2cboo\files")
+                        r"D:\Project\workplace\off-policy-release\offpolicy\scripts\results\Mac\Mac Protocol\rmaddpg\a_p048_exploration\wandb\continue\files")
     parser.add_argument("--need_comm", action='store_true', default=True)
     return parser

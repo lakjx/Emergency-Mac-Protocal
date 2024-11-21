@@ -318,7 +318,7 @@ class MacProtocolEnv():
             self.BS_obs = self.UE_num + 1
             self.rewards = -1
         if error_del:
-            self.rewards = self.rewards-self.rho  
+            self.rewards = self.rewards-2*self.rho  
         #判断BS_obs是否合法
         assert self.BS_obs_space.contains(self.BS_obs)
                                    

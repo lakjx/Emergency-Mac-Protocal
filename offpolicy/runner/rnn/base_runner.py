@@ -2,6 +2,7 @@ import os
 import numpy as np
 import wandb
 import torch
+import time
 from tensorboardX import SummaryWriter
 
 from offpolicy.utils.rec_buffer import RecReplayBuffer, PrioritizedRecReplayBuffer
@@ -292,7 +293,9 @@ class RecRunner(object):
         """Save all policies to the path specified by the config."""
         for pid in self.policy_ids:
             policy_critic = self.policies[pid].critic
-            critic_save_path = self.save_dir + '/' + str(pid)
+            #路径中加入小时和分钟
+            t_time = time.localtime()
+            critic_save_path = self.save_dir + '/'  + '_' + str(t_time.tm_hour) + '_' + str(t_time.tm_min)+ '/' + str(pid)
             if not os.path.exists(critic_save_path):
                 os.makedirs(critic_save_path)
             torch.save(policy_critic.state_dict(),

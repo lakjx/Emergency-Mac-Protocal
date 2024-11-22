@@ -35,12 +35,74 @@ class MPERunner(RecRunner):
         self.log_env(eval_infos, suffix="eval_")
     
     @torch.no_grad()
-    def test(self):
+    def test(self,num_episodes=1):
         """Collect episodes to test the policy."""
         self.trainer.prep_rollout()
-
+        dataset = []
         for _ in range(1):
             env_info = self.collecter( explore=False, training_episode=False, warmup=False, test=True)
+            #从episode_records中获取数据
+            episode_data = []
+            for i in range(len(self.episode_records['state'])):
+                data_point = {
+                    "observation":{
+                        "step": self.episode_records['state'][i]['step'],
+                        "agents_obs": self.episode_records['state'][i]['observation'],
+                        #more imformation
+                        "env_metrics": {
+                            "Goodput": env_info['Goodput'],
+                            "Packet_Received_Ratio": env_info['Packet_Received_Ratio'],
+                            "Collision_Ratio": env_info['Collision_Ratio'],
+                            "buffer_occupancy": env_info['buffer_occupancy']
+                        }
+                    },
+                    "action":{
+                        "step": self.episode_records['action'][i]['step'],
+                        "agents_actions": self.episode_records['action'][i]['action']
+                    }
+                }
+                episode_data.append(data_point)
+            dataset.extend(episode_data)
+
+        format_dat = self.format_for_llm(dataset)
+        self.save_dataset(format_dat, "marl_training_data.jsonl")
+    
+    def save_dataset(self,dataset,filename):
+        import json
+        import os
+        with open(filename, 'w', encoding='utf-8') as f:
+            for item in dataset:
+                json_str = json.dumps(item, ensure_ascii=False)
+                f.write(json_str + '\n')
+
+    def format_for_llm(self,dataset):
+        """将数据格式化为适合LLM训练的格式"""
+        formatted_data = []
+        for item in dataset:
+            prompt = f"""
+            Environment State:
+            Step: {item['observation']['step']}
+            Agents Observations: {item['observation']['agents_obs']}
+            Environment Metrics:
+            - Goodput: {item['observation']['env_metrics']['Goodput']}
+            - Packet Received Ratio: {item['observation']['env_metrics']['Packet_Received_Ratio']}
+            - Collision Ratio: {item['observation']['env_metrics']['Collision_Ratio']}
+            - Buffer Occupancy: {item['observation']['env_metrics']['buffer_occupancy']}
+            
+            Based on the above state, what actions should the agents take?
+            """
+            
+            completion = f"""
+            The agents should take the following actions:
+            {item['action']['agents_actions']}
+            """
+            
+            formatted_data.append({
+                "prompt": prompt,
+                "completion": completion
+            })
+        
+        return formatted_data
 
     # for mpe-simple_spread and mpe-simple_reference  
     @torch.no_grad() 
@@ -272,16 +334,21 @@ class MPERunner(RecRunner):
             if terminate_episodes:
                 break
         if test:
-            import json
-            import os
-            save_dir = self.args.test_record_dir
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
+            self.episode_records = episode_records
+        #     import json
+        #     import os
+        #     save_dir = self.args.test_record_dir
+        #     if not os.path.exists(save_dir):
+        #         os.makedirs(save_dir)
             #标记用户数量的到达率p_SDU_arrival
-            logo = 'UE:'+str(self.args.UE_num) + "_p=" + str(self.args.p_SDU_arrival)
-            file_name = os.path.join(save_dir, logo + ".json")
-            with open(file_name, 'w') as f:
-                json.dump(episode_records, f,indent=4)
+            # logo = f'UE={self.args.UE_num}_p={self.args.p_SDU_arrival}'
+            # file_name = os.path.join(save_dir, logo + ".json")
+            # try:
+            #     with open(file_name, 'w') as f:
+            #         json.dump(episode_records, f, indent=4,separators=(',', ': '))
+            #     print(f"JSON file has been created at {file_name}")
+            # except Exception as e:
+            #     print(f"Failed to create JSON file: {e}")
 
         for agent_id, p_id in zip(self.agent_ids, self.policy_ids):
             # episode_obs[p_id][t] = np.stack(obs[:, agent_id])

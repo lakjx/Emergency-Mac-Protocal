@@ -64,7 +64,7 @@ def parse_args(args, parser):
 
     parser.add_argument('--rho', type=int, default=3)
     parser.add_argument('--recent_k', type=int, default=2)
-    parser.add_argument('--UE_num', type=int, default=2)
+    parser.add_argument('--UE_num', type=int, default=3)
     parser.add_argument('--UE_txbuff_len', type=int, default=20)
     parser.add_argument('--p_SDU_arrival', type=float, default=0.48)
     parser.add_argument('--tbl_error_rate', type=float, default=1e-2)
@@ -187,13 +187,13 @@ def main(args):
               }
 
     total_num_steps = 0
-    # runner = Runner(config=config)
-    # while total_num_steps < all_args.num_env_steps:
-    #     total_num_steps = runner.run()
+    runner = Runner(config=config)
+    while total_num_steps < all_args.num_env_steps:
+        total_num_steps = runner.run()
 
-    runner = Runner(config=config,test_mode=True)
-    # runner.eval()
-    runner.test()
+    # runner = Runner(config=config,test_mode=True)
+    # # runner.eval()
+    # runner.test()
 
     # env.close()
     if all_args.use_eval and (eval_env is not env):

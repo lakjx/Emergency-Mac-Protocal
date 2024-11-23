@@ -58,13 +58,13 @@ def parse_args(args, parser):
                         default='Mac Protocol', help="Which scenario to run on")
     parser.add_argument("--num_landmarks", type=int, default=3)
     parser.add_argument('--num_agents', type=int,
-                        default=4, help="number of agents")
+                        default=3, help="number of agents")
     parser.add_argument('--use_same_share_obs', action='store_false',
                         default=True, help="Whether to use available actions")
 
     parser.add_argument('--rho', type=int, default=3)
-    parser.add_argument('--recent_k', type=int, default=2)
-    parser.add_argument('--UE_num', type=int, default=3)
+    parser.add_argument('--recent_k', type=int, default=3)
+    parser.add_argument('--UE_num', type=int, default=2)
     parser.add_argument('--UE_txbuff_len', type=int, default=20)
     parser.add_argument('--p_SDU_arrival', type=float, default=0.48)
     parser.add_argument('--tbl_error_rate', type=float, default=1e-2)

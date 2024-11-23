@@ -311,7 +311,7 @@ class MacProtocolEnv():
                     self.sdus_received.append(data)
                     self.rewards = 2*self.rho
                 else:
-                    self.rewards = -self.rho 
+                    self.rewards = -self.rho/2
         elif self.data_channel == []: # 空闲
             self.BS_obs = 0
             self.rewards = -self.rho/2
@@ -320,7 +320,7 @@ class MacProtocolEnv():
             self.BS_obs = self.UE_num + 1
             self.rewards = -self.rho/2
 
-        self.rewards = self.rewards - error_del*self.rho
+        self.rewards = self.rewards - error_del*2*self.rho
         #判断BS_obs是否合法
         assert self.BS_obs_space.contains(self.BS_obs)
                                    
